@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payclass Search</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; line-height: 1.4; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .muted { color: #666; font-size: 0.9rem; }
+  fieldset { border: 1px solid #8884; border-radius: 6px; padding: 1rem; margin: 1rem 0; }
+  legend { padding: 0 0.4rem; font-weight: 600; }
+  label { display: block; margin: 0.5rem 0 0.2rem; font-size: 0.9rem; }
+  input, select, textarea { width: 100%; box-sizing: border-box; padding: 0.5rem; font: inherit; border: 1px solid #8886; border-radius: 4px; background: transparent; color: inherit; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .hidden { display: none; }
+  button { margin-top: 0.75rem; padding: 0.6rem 1.2rem; font: inherit; border: 0; border-radius: 4px; background: #2563eb; color: #fff; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  .status { margin-top: 1rem; font-weight: 600; }
+  .error { color: #b91c1c; }
+  pre { background: #8881; padding: 0.75rem; border-radius: 6px; overflow: auto; font-size: 0.85rem; max-height: 480px; }
+  .step { margin-top: 1rem; }
+</style>
+</head>
+<body>
+<h1>Payclass Search</h1>
+<p class="muted">Send a plain-language request or a structured task. Your API key stays in this browser tab only.</p>
+
+<fieldset>
+  <legend>Connection</legend>
+  <label for="key">API key</label>
+  <input id="key" type="password" autocomplete="off" placeholder="SEARCH_MANAGER_API_KEY">
+</fieldset>
+
+<fieldset>
+  <legend>Request</legend>
+  <label for="mode">Mode</label>
+  <select id="mode">
+    <option value="plain">Plain language</option>
+    <option value="structured">Structured task</option>
+  </select>
+
+  <div id="plainBox">
+    <label for="request">What do you want to search for?</label>
+    <textarea id="request" rows="3" placeholder="e.g. recent news about Strix Aero"></textarea>
+  </div>
+
+  <div id="structBox" class="hidden">
+    <label for="type">Task type</label>
+    <select id="type">
+      <option value="web_search">Web search</option>
+      <option value="news_search">News search</option>
+      <option value="court_search">Court search</option>
+      <option value="filing_search">Filing search</option>
+      <option value="economic_search">Economic search</option>
+      <option value="entity_background">Entity background</option>
+    </select>
+
+    <div id="fQuery">
+      <label for="query">Query</label>
+      <input id="query" type="text">
+    </div>
+    <div id="fName" class="hidden">
+      <label for="name">Entity or party name</label>
+      <input id="name" type="text">
+    </div>
+    <div id="fCourt" class="hidden">
+      <label for="court">Court (optional)</label>
+      <input id="court" type="text">
+    </div>
+    <div id="fForms" class="hidden">
+      <label for="forms">Form types, comma-separated (optional)</label>
+      <input id="forms" type="text" placeholder="10-K, 8-K">
+    </div>
+    <div id="fDays" class="hidden">
+      <label for="days">Days back</label>
+      <input id="days" type="number" min="1" max="3650">
+    </div>
+    <div class="row">
+      <div>
+        <label for="limit">Limit</label>
+        <input id="limit" type="number" min="1" max="50" value="10">
+      </div>
+    </div>
+  </div>
+
+  <button id="go">Search</button>
+</fieldset>
+
+<div id="status" class="status"></div>
+<div id="results"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const keyInput = $("key");
+keyInput.value = sessionStorage.getItem("ps_key") || "";
+keyInput.addEventListener("change", () => sessionStorage.setItem("ps_key", keyInput.value));
+
+const FIELDS = {
+  web_search: ["fQuery", "limit"],
+  news_search: ["fQuery", "fDays", "limit"],
+  court_search: ["fName", "fCourt", "limit"],
+  filing_search: ["fQuery", "fForms", "limit"],
+  economic_search: ["fQuery", "limit"],
+  entity_background: ["fName", "fDays", "limit"],
+};
+const ALL_FIELDS = ["fQuery", "fName", "fCourt", "fForms", "fDays"];
+
+function showFields() {
+  const wanted = FIELDS[$("type").value];
+  ALL_FIELDS.forEach((f) => $(f).classList.toggle("hidden", !wanted.includes(f)));
+  $("fDays").classList.toggle("hidden", !wanted.includes("fDays"));
+}
+$("type").addEventListener("change", showFields);
+$("mode").addEventListener("change", () => {
+  const plain = $("mode").value === "plain";
+  $("plainBox").classList.toggle("hidden", !plain);
+  $("structBox").classList.toggle("hidden", plain);
+});
+showFields();
+
+function buildBody() {
+  if ($("mode").value === "plain") {
+    return { request: $("request").value.trim() };
+  }
+  const type = $("type").value;
+  const task = { type, limit: parseInt($("limit").value, 10) || 10 };
+  if (type === "court_search") {
+    task.party_name = $("name").value.trim();
+    if ($("court").value.trim()) task.court = $("court").value.trim();
+  } else if (type === "entity_background") {
+    task.name = $("name").value.trim();
+    task.days = parseInt($("days").value, 10) || 365;
+  } else {
+    task.query = $("query").value.trim();
+    if (type === "news_search") task.days = parseInt($("days").value, 10) || 30;
+    if (type === "filing_search") {
+      task.forms = $("forms").value.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return { task };
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+$("go").addEventListener("click", async () => {
+  const key = keyInput.value.trim();
+  sessionStorage.setItem("ps_key", key);
+  const status = $("status");
+  const out = $("results");
+  out.innerHTML = "";
+  status.className = "status";
+  if (!key) { status.textContent = "Enter the API key first."; status.className = "status error"; return; }
+
+  const btn = $("go");
+  btn.disabled = true;
+  status.textContent = "Searching...";
+  try {
+    const resp = await fetch("/v1/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+      body: JSON.stringify(buildBody()),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      status.textContent = "Error " + resp.status + ": " + (data.detail || resp.statusText);
+      status.className = "status error";
+      return;
+    }
+    if (data.status === "clarification_needed") {
+      status.textContent = "Clarification needed: " + data.question;
+      return;
+    }
+    status.textContent = "Status: " + data.status + " (task " + data.task_id + ")";
+    for (const [stepId, step] of Object.entries(data.results || {})) {
+      out.insertAdjacentHTML("beforeend",
+        '<div class="step"><strong>' + esc(stepId) + "</strong> &middot; " + esc(step.status || "") +
+        '<pre>' + esc(JSON.stringify(step, null, 2)) + "</pre></div>");
+    }
+  } catch (err) {
+    status.textContent = "Request failed: " + err.message;
+    status.className = "status error";
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

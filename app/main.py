@@ -9,7 +9,10 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 
 import httpx
+from pathlib import Path
+
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, ValidationError
 
 from app.cache import Cache
@@ -81,6 +84,11 @@ def check_key(authorization: str | None) -> None:
     expected = f"Bearer {get_settings().api_key}"
     if not authorization or not hmac.compare_digest(authorization, expected):
         raise HTTPException(status_code=401, detail="invalid or missing API key")
+
+
+@app.get("/", include_in_schema=False)
+async def ui() -> FileResponse:
+    return FileResponse(Path(__file__).parent / "static" / "index.html")
 
 
 @app.get("/healthz")
