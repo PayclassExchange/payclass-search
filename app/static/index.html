@@ -27,6 +27,10 @@
   h2 { font-size: 1rem; margin: 1.25rem 0 0.25rem; }
   pre { background: #8881; padding: 0.75rem; border-radius: 6px; overflow: auto; font-size: 0.85rem; max-height: 420px; }
   .step { margin-top: 0.5rem; }
+  #results { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.9rem; margin-top: 1rem; align-items: start; }
+  .tile { border: 1px solid #8884; border-radius: 8px; overflow: hidden; }
+  .tile header { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.6rem 0.8rem; background: #8881; }
+  .tile-body { padding: 0.6rem 0.8rem; max-height: 380px; overflow-y: auto; }
   ol.links { padding-left: 1.25rem; }
   ol.links li { margin-bottom: 0.9rem; }
   ol.links a { font-weight: 600; }
@@ -104,27 +108,31 @@ async function post(body) {
   return data;
 }
 
+function tileHtml(title, status, bodyHtml) {
+  return '<section class="tile"><header><strong>' + esc(title) + '</strong><span class="muted">' + esc(status || "") + '</span></header><div class="tile-body">' + bodyHtml + "</div></section>";
+}
+
 function render(title, data) {
   const out = $("results");
   if (data.status === "clarification_needed") {
-    out.insertAdjacentHTML("beforeend", '<h2>' + esc(title) + '</h2><div class="step">' + esc(data.question) + "</div>");
+    out.insertAdjacentHTML("beforeend", tileHtml(title, "needs clarification", '<div>' + esc(data.question) + "</div>"));
     return;
   }
-  out.insertAdjacentHTML("beforeend", '<h2>' + esc(title) + " &middot; " + esc(data.status) + "</h2>");
+  let body = "";
   for (const step of Object.values(data.results || {})) {
     if (step.status !== "ok" || !Array.isArray(step.items)) {
-      out.insertAdjacentHTML("beforeend", '<div class="step error">' + esc(step.status || "error") + "</div>");
+      body += '<div class="error">' + esc(step.status || "error") + "</div>";
       continue;
     }
     if (step.items.length === 0) {
-      out.insertAdjacentHTML("beforeend", '<div class="step muted">No results.</div>');
+      body += '<div class="muted">No results.</div>';
       continue;
     }
-    const rows = step.items.map((it) =>
+    body += '<ol class="links">' + step.items.map((it) =>
       '<li><a href="' + esc(it.url || "#") + '" target="_blank" rel="noopener noreferrer">' + esc(it.title || it.url || "(untitled)") + "</a>" +
-      (it.snippet ? '<div class="muted">' + esc(it.snippet) + "</div>" : "") + "</li>").join("");
-    out.insertAdjacentHTML("beforeend", '<ol class="links">' + rows + "</ol>");
+      (it.snippet ? '<div class="muted">' + esc(it.snippet) + "</div>" : "") + "</li>").join("") + "</ol>";
   }
+  out.insertAdjacentHTML("beforeend", tileHtml(title, data.status, body || '<div class="muted">No results.</div>'));
 }
 
 $("go").addEventListener("click", async () => {
