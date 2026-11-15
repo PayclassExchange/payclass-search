@@ -68,8 +68,9 @@ Tuning defaults if unset: `DEFAULT_DEADLINE_SECONDS=15`, `MAX_DEADLINE_SECONDS=6
 `BREAKER_COOLDOWN_SECONDS=60`.
 
 A resource loads only when its setting is present: SearXNG needs `SEARXNG_URL`, EDGAR
-needs `SEC_USER_AGENT`, and FRED needs `FRED_API_KEY`. CourtListener works without a
-token, but a token raises its rate limits.
+needs `SEC_USER_AGENT`, FRED needs `FRED_API_KEY`, and CourtListener needs
+`COURTLISTENER_TOKEN`. CourtListener rejects anonymous requests, so `court_search` stays
+unavailable until a token is set.
 
 ## Run locally
 

@@ -43,7 +43,8 @@ def build_resources(settings: Settings, client: httpx.AsyncClient) -> dict[str, 
         resources["searxng_news"] = SearxngResource(
             client, settings.searxng_url, "news", "searxng_news"
         )
-    resources["courtlistener"] = CourtListenerResource(client, settings.courtlistener_token)
+    if settings.courtlistener_token:
+        resources["courtlistener"] = CourtListenerResource(client, settings.courtlistener_token)
     if settings.sec_user_agent:
         resources["sec_edgar"] = SecEdgarResource(client, settings.sec_user_agent)
     if settings.fred_api_key:
