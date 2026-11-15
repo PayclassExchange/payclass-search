@@ -6,83 +6,60 @@
 <title>Payclass Search</title>
 <style>
   :root { color-scheme: light dark; }
-  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; line-height: 1.4; }
-  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; line-height: 1.4; }
+  header { background: #fff; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+  header img { display: block; height: 72px; width: auto; }
+  h1 { font-size: 1.25rem; margin: 0.75rem 0 0; }
   .muted { color: #666; font-size: 0.9rem; }
   fieldset { border: 1px solid #8884; border-radius: 6px; padding: 1rem; margin: 1rem 0; }
   legend { padding: 0 0.4rem; font-weight: 600; }
   label { display: block; margin: 0.5rem 0 0.2rem; font-size: 0.9rem; }
   input, select, textarea { width: 100%; box-sizing: border-box; padding: 0.5rem; font: inherit; border: 1px solid #8886; border-radius: 4px; background: transparent; color: inherit; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem; margin-top: 0.5rem; }
+  .source { border: 1px solid #8886; border-radius: 6px; padding: 0.6rem 0.75rem; display: flex; gap: 0.5rem; align-items: flex-start; cursor: pointer; }
+  .source input { width: auto; margin-top: 0.2rem; }
+  .source small { display: block; color: #666; }
   .hidden { display: none; }
   button { margin-top: 0.75rem; padding: 0.6rem 1.2rem; font: inherit; border: 0; border-radius: 4px; background: #2563eb; color: #fff; cursor: pointer; }
   button:disabled { opacity: 0.5; cursor: wait; }
   .status { margin-top: 1rem; font-weight: 600; }
   .error { color: #b91c1c; }
-  pre { background: #8881; padding: 0.75rem; border-radius: 6px; overflow: auto; font-size: 0.85rem; max-height: 480px; }
-  .step { margin-top: 1rem; }
+  h2 { font-size: 1rem; margin: 1.25rem 0 0.25rem; }
+  pre { background: #8881; padding: 0.75rem; border-radius: 6px; overflow: auto; font-size: 0.85rem; max-height: 420px; }
+  .step { margin-top: 0.5rem; }
 </style>
 </head>
 <body>
-<h1>Payclass Search</h1>
-<p class="muted">Send a plain-language request or a structured task. Your API key stays in this browser tab only.</p>
-
-<fieldset>
-  <legend>Connection</legend>
-  <label for="key">API key</label>
-  <input id="key" type="password" autocomplete="off" placeholder="SEARCH_MANAGER_API_KEY">
-</fieldset>
+<header>
+  <img src="/static/payclass-logo.jpg" alt="Payclass, Your Capital Partner">
+  <h1>Payclass Search</h1>
+</header>
 
 <fieldset>
   <legend>Request</legend>
   <label for="mode">Mode</label>
   <select id="mode">
-    <option value="plain">Plain language</option>
-    <option value="structured">Structured task</option>
+    <option value="structured">Pick sources</option>
+    <option value="plain">Plain language (the server chooses sources)</option>
   </select>
 
-  <div id="plainBox">
-    <label for="request">What do you want to search for?</label>
-    <textarea id="request" rows="3" placeholder="e.g. recent news about Strix Aero"></textarea>
+  <div id="structBox">
+    <label>Sources</label>
+    <div class="sources">
+      <label class="source"><input type="checkbox" name="src" value="web_search" checked><span>Web<small>SearXNG general</small></span></label>
+      <label class="source"><input type="checkbox" name="src" value="news_search"><span>News<small>SearXNG news</small></span></label>
+      <label class="source"><input type="checkbox" name="src" value="court_search"><span>Courts<small>CourtListener, party name</small></span></label>
+      <label class="source"><input type="checkbox" name="src" value="filing_search"><span>SEC filings<small>EDGAR</small></span></label>
+      <label class="source"><input type="checkbox" name="src" value="economic_search"><span>Economic data<small>FRED</small></span></label>
+    </div>
+    <label for="query">Query</label>
+    <input id="query" type="text" placeholder="e.g. Strix Aero">
+    <div class="muted" style="margin-top:0.5rem">Filing types (SEC only, optional, comma-separated): <input id="forms" type="text" placeholder="10-K, 8-K" style="width:auto;display:inline-block;margin-left:0.5rem"></div>
   </div>
 
-  <div id="structBox" class="hidden">
-    <label for="type">Task type</label>
-    <select id="type">
-      <option value="web_search">Web search</option>
-      <option value="news_search">News search</option>
-      <option value="court_search">Court search</option>
-      <option value="filing_search">Filing search</option>
-      <option value="economic_search">Economic search</option>
-      <option value="entity_background">Entity background</option>
-    </select>
-
-    <div id="fQuery">
-      <label for="query">Query</label>
-      <input id="query" type="text">
-    </div>
-    <div id="fName" class="hidden">
-      <label for="name">Entity or party name</label>
-      <input id="name" type="text">
-    </div>
-    <div id="fCourt" class="hidden">
-      <label for="court">Court (optional)</label>
-      <input id="court" type="text">
-    </div>
-    <div id="fForms" class="hidden">
-      <label for="forms">Form types, comma-separated (optional)</label>
-      <input id="forms" type="text" placeholder="10-K, 8-K">
-    </div>
-    <div id="fDays" class="hidden">
-      <label for="days">Days back</label>
-      <input id="days" type="number" min="1" max="3650">
-    </div>
-    <div class="row">
-      <div>
-        <label for="limit">Limit</label>
-        <input id="limit" type="number" min="1" max="50" value="10">
-      </div>
-    </div>
+  <div id="plainBox" class="hidden">
+    <label for="request">What do you want to search for?</label>
+    <textarea id="request" rows="3" placeholder="e.g. recent news about Strix Aero"></textarea>
   </div>
 
   <button id="go">Search</button>
@@ -93,95 +70,90 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const keyInput = $("key");
-keyInput.value = sessionStorage.getItem("ps_key") || "";
-keyInput.addEventListener("change", () => sessionStorage.setItem("ps_key", keyInput.value));
+const LABELS = { web_search: "Web", news_search: "News", court_search: "Courts", filing_search: "SEC filings", economic_search: "Economic data" };
 
-const FIELDS = {
-  web_search: ["fQuery", "limit"],
-  news_search: ["fQuery", "fDays", "limit"],
-  court_search: ["fName", "fCourt", "limit"],
-  filing_search: ["fQuery", "fForms", "limit"],
-  economic_search: ["fQuery", "limit"],
-  entity_background: ["fName", "fDays", "limit"],
-};
-const ALL_FIELDS = ["fQuery", "fName", "fCourt", "fForms", "fDays"];
-
-function showFields() {
-  const wanted = FIELDS[$("type").value];
-  ALL_FIELDS.forEach((f) => $(f).classList.toggle("hidden", !wanted.includes(f)));
-  $("fDays").classList.toggle("hidden", !wanted.includes("fDays"));
-}
-$("type").addEventListener("change", showFields);
 $("mode").addEventListener("change", () => {
   const plain = $("mode").value === "plain";
   $("plainBox").classList.toggle("hidden", !plain);
   $("structBox").classList.toggle("hidden", plain);
 });
-showFields();
-
-function buildBody() {
-  if ($("mode").value === "plain") {
-    return { request: $("request").value.trim() };
-  }
-  const type = $("type").value;
-  const task = { type, limit: parseInt($("limit").value, 10) || 10 };
-  if (type === "court_search") {
-    task.party_name = $("name").value.trim();
-    if ($("court").value.trim()) task.court = $("court").value.trim();
-  } else if (type === "entity_background") {
-    task.name = $("name").value.trim();
-    task.days = parseInt($("days").value, 10) || 365;
-  } else {
-    task.query = $("query").value.trim();
-    if (type === "news_search") task.days = parseInt($("days").value, 10) || 30;
-    if (type === "filing_search") {
-      task.forms = $("forms").value.split(",").map((s) => s.trim()).filter(Boolean);
-    }
-  }
-  return { task };
-}
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+function taskFor(type, query, forms) {
+  const limit = 10;
+  if (type === "court_search") return { type, party_name: query, limit };
+  if (type === "news_search") return { type, query, days: 30, limit };
+  if (type === "filing_search") return { type, query, forms, limit };
+  return { type, query, limit };
+}
+
+async function post(body) {
+  const resp = await fetch("/ui/tasks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.detail || resp.statusText);
+  return data;
+}
+
+function render(title, data) {
+  const out = $("results");
+  if (data.status === "clarification_needed") {
+    out.insertAdjacentHTML("beforeend", '<h2>' + esc(title) + '</h2><div class="step">' + esc(data.question) + "</div>");
+    return;
+  }
+  out.insertAdjacentHTML("beforeend", '<h2>' + esc(title) + " &middot; " + esc(data.status) + "</h2>");
+  for (const [stepId, step] of Object.entries(data.results || {})) {
+    out.insertAdjacentHTML("beforeend",
+      '<div class="step"><strong>' + esc(stepId) + "</strong> &middot; " + esc(step.status || "") +
+      '<pre>' + esc(JSON.stringify(step, null, 2)) + "</pre></div>");
+  }
+}
+
 $("go").addEventListener("click", async () => {
-  const key = keyInput.value.trim();
-  sessionStorage.setItem("ps_key", key);
   const status = $("status");
   const out = $("results");
   out.innerHTML = "";
   status.className = "status";
-  if (!key) { status.textContent = "Enter the API key first."; status.className = "status error"; return; }
-
   const btn = $("go");
   btn.disabled = true;
   status.textContent = "Searching...";
+
   try {
-    const resp = await fetch("/v1/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
-      body: JSON.stringify(buildBody()),
-    });
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) {
-      status.textContent = "Error " + resp.status + ": " + (data.detail || resp.statusText);
-      status.className = "status error";
+    if ($("mode").value === "plain") {
+      const text = $("request").value.trim();
+      if (text.length < 2) throw new Error("Type a request first.");
+      render("Plain language", await post({ request: text }));
+    } else {
+      const query = $("query").value.trim();
+      if (query.length < 2) throw new Error("Type a query first.");
+      const forms = $("forms").value.split(",").map((s) => s.trim()).filter(Boolean);
+      const picked = [...document.querySelectorAll('input[name="src"]:checked')].map((c) => c.value);
+      if (picked.length === 0) throw new Error("Pick at least one source.");
+
+      const results = await Promise.allSettled(
+        picked.map((type) => post({ task: taskFor(type, query, forms) }))
+      );
+      let failures = 0;
+      results.forEach((r, i) => {
+        const label = LABELS[picked[i]];
+        if (r.status === "fulfilled") render(label, r.value);
+        else {
+          failures++;
+          out.insertAdjacentHTML("beforeend", '<h2>' + esc(label) + '</h2><div class="step error">' + esc(r.reason.message) + "</div>");
+        }
+      });
+      status.textContent = "Done: " + (picked.length - failures) + " of " + picked.length + " sources returned.";
       return;
     }
-    if (data.status === "clarification_needed") {
-      status.textContent = "Clarification needed: " + data.question;
-      return;
-    }
-    status.textContent = "Status: " + data.status + " (task " + data.task_id + ")";
-    for (const [stepId, step] of Object.entries(data.results || {})) {
-      out.insertAdjacentHTML("beforeend",
-        '<div class="step"><strong>' + esc(stepId) + "</strong> &middot; " + esc(step.status || "") +
-        '<pre>' + esc(JSON.stringify(step, null, 2)) + "</pre></div>");
-    }
+    status.textContent = "Done.";
   } catch (err) {
-    status.textContent = "Request failed: " + err.message;
+    status.textContent = err.message;
     status.className = "status error";
   } finally {
     btn.disabled = false;

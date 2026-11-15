@@ -13,6 +13,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
 from app.cache import Cache
@@ -86,9 +87,19 @@ def check_key(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="invalid or missing API key")
 
 
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+
+
 @app.get("/", include_in_schema=False)
 async def ui() -> FileResponse:
     return FileResponse(Path(__file__).parent / "static" / "index.html")
+
+
+@app.post("/ui/tasks", include_in_schema=False)
+async def ui_run_task(body: TaskRequest, request: Request) -> dict:
+    # Same-origin endpoint for the browser page. The server attaches the API key,
+    # so the key never reaches the page. Gate this route before sharing the URL.
+    return await run_task(body, request, authorization=f"Bearer {get_settings().api_key}")
 
 
 @app.get("/healthz")
