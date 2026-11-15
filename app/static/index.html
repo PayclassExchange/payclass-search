@@ -46,7 +46,7 @@
   <div id="structBox">
     <label>Sources</label>
     <div class="sources">
-      <label class="source"><input type="checkbox" name="src" value="web_search" checked><span>Web<small>SearXNG general</small></span></label>
+      <label class="source"><input type="checkbox" name="src" value="web_search" checked><span>Open-source search engines<small>Web</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="news_search"><span>News<small>SearXNG news</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="court_search"><span>Courts<small>CourtListener, party name</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="filing_search"><span>SEC filings<small>EDGAR</small></span></label>
@@ -70,7 +70,7 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const LABELS = { web_search: "Web", news_search: "News", court_search: "Courts", filing_search: "SEC filings", economic_search: "Economic data" };
+const LABELS = { web_search: "Open-source search engines", news_search: "News", court_search: "Courts", filing_search: "SEC filings", economic_search: "Economic data" };
 
 $("mode").addEventListener("change", () => {
   const plain = $("mode").value === "plain";
