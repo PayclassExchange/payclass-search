@@ -27,6 +27,9 @@
   h2 { font-size: 1rem; margin: 1.25rem 0 0.25rem; }
   pre { background: #8881; padding: 0.75rem; border-radius: 6px; overflow: auto; font-size: 0.85rem; max-height: 420px; }
   .step { margin-top: 0.5rem; }
+  ol.links { padding-left: 1.25rem; }
+  ol.links li { margin-bottom: 0.9rem; }
+  ol.links a { font-weight: 600; }
 </style>
 </head>
 <body>
@@ -108,10 +111,19 @@ function render(title, data) {
     return;
   }
   out.insertAdjacentHTML("beforeend", '<h2>' + esc(title) + " &middot; " + esc(data.status) + "</h2>");
-  for (const [stepId, step] of Object.entries(data.results || {})) {
-    out.insertAdjacentHTML("beforeend",
-      '<div class="step"><strong>' + esc(stepId) + "</strong> &middot; " + esc(step.status || "") +
-      '<pre>' + esc(JSON.stringify(step, null, 2)) + "</pre></div>");
+  for (const step of Object.values(data.results || {})) {
+    if (step.status !== "ok" || !Array.isArray(step.items)) {
+      out.insertAdjacentHTML("beforeend", '<div class="step error">' + esc(step.status || "error") + "</div>");
+      continue;
+    }
+    if (step.items.length === 0) {
+      out.insertAdjacentHTML("beforeend", '<div class="step muted">No results.</div>');
+      continue;
+    }
+    const rows = step.items.map((it) =>
+      '<li><a href="' + esc(it.url || "#") + '" target="_blank" rel="noopener noreferrer">' + esc(it.title || it.url || "(untitled)") + "</a>" +
+      (it.snippet ? '<div class="muted">' + esc(it.snippet) + "</div>" : "") + "</li>").join("");
+    out.insertAdjacentHTML("beforeend", '<ol class="links">' + rows + "</ol>");
   }
 }
 
