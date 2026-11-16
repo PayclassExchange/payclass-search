@@ -175,6 +175,29 @@ function render(title, data) {
   out.insertAdjacentHTML("beforeend", tileHtml(title, status, body || '<div class="muted">Results (0)</div>'));
 }
 
+async function rankStep(query, step) {
+  if (step.status !== "ok" || !Array.isArray(step.items) || step.items.length < 2) return step;
+  try {
+    const resp = await fetch("/ui/rank", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, items: step.items.map((it) => ({ title: it.title || "", snippet: it.snippet || "", url: it.url || "" })) }),
+    });
+    if (!resp.ok) return step;
+    const data = await resp.json();
+    if (!Array.isArray(data.order)) return step;
+    return { ...step, items: data.order.map((i) => step.items[i]) };
+  } catch (err) {
+    return step;
+  }
+}
+
+async function rankData(query, data) {
+  if (data.status === "clarification_needed") return data;
+  const entries = await Promise.all(Object.entries(data.results || {}).map(async ([k, step]) => [k, await rankStep(query, step)]));
+  return { ...data, results: Object.fromEntries(entries) };
+}
+
 $("go").addEventListener("click", async () => {
   const status = $("status");
   const out = $("results");
@@ -188,7 +211,7 @@ $("go").addEventListener("click", async () => {
     if ($("mode").value === "plain") {
       const text = $("request").value.trim();
       if (text.length < 2) throw new Error("Type a request first.");
-      render("Plain language", await post({ request: text }));
+      render("Plain language", await rankData(text, await post({ request: text })));
     } else {
       const query = $("query").value.trim();
       if (query.length < 2) throw new Error("Type a query first.");
@@ -200,7 +223,10 @@ $("go").addEventListener("click", async () => {
         picked.map((type) => type === "drive_search" ? postDrive(query) : post({ task: taskFor(type, query, forms) }))
       );
       let failures = 0;
-      results.forEach((r, i) => {
+      const ranked = await Promise.all(results.map((r) =>
+        r.status === "fulfilled" ? rankData(query, r.value).then((v) => ({ status: "fulfilled", value: v })) : r
+      ));
+      ranked.forEach((r, i) => {
         const label = LABELS[picked[i]];
         if (r.status === "fulfilled") render(label, r.value);
         else {

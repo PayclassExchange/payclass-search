@@ -23,6 +23,7 @@ from app.executor import CircuitBreaker, Executor
 from app.intake import IntakeError, NeedsClarification, plain_language_to_task
 from app.models import task_adapter
 from app.planner import plan
+from app.rank import rank_items
 from app.resources.base import Resource
 from app.resources.courtlistener import CourtListenerResource
 from app.resources.fred import FredResource
@@ -176,6 +177,29 @@ async def ui_drive(body: DriveRequest, request: Request) -> dict:
     access = await drive.access_token_for(client, client_id, client_secret, session["rt"])
     items = await drive.drive_search(client, access, body.query, body.limit)
     return {"task_id": uuid.uuid4().hex, "status": "ok", "results": {"drive": {"status": "ok", "items": items}}}
+
+
+class RankItem(BaseModel):
+    title: str = Field(default="", max_length=500)
+    snippet: str = Field(default="", max_length=1000)
+    url: str = Field(default="", max_length=2000)
+
+
+class RankRequest(BaseModel):
+    query: str = Field(min_length=2, max_length=200)
+    items: list[RankItem] = Field(max_length=50)
+
+
+@app.post("/ui/rank", include_in_schema=False)
+async def ui_rank(body: RankRequest, request: Request) -> dict:
+    settings = get_settings()
+    order = await rank_items(
+        request.app.state.client,
+        settings,
+        body.query,
+        [item.model_dump() for item in body.items],
+    )
+    return {"order": order}
 
 
 @app.get("/healthz")

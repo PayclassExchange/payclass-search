@@ -33,6 +33,7 @@ class Settings:
     google_oauth_client_secret: str | None = None
     session_secret: str | None = None
     public_base_url: str = "https://search.payclassinc.com"
+    n8n_rank_url: str | None = None
 
 
 @lru_cache(maxsize=1)
@@ -57,4 +58,5 @@ def get_settings() -> Settings:
         google_oauth_client_secret=_get("GOOGLE_OAUTH_CLIENT_SECRET"),
         session_secret=_get("SESSION_SECRET"),
         public_base_url=_get("PUBLIC_BASE_URL") or "https://search.payclassinc.com",
+        n8n_rank_url=_get("N8N_RANK_WEBHOOK_URL"),
     )
