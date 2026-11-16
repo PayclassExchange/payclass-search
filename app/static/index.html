@@ -184,7 +184,7 @@ function tileHtml(title, status, bodyHtml) {
   return '<section class="tile"><header><strong>' + esc(title) + '</strong><span class="muted">' + esc(status || "") + '</span></header><div class="tile-body">' + bodyHtml + "</div></section>";
 }
 
-function tileFor(title, data) {
+function tileFor(title, data, pending = false) {
   if (data.status === "clarification_needed") {
     return tileHtml(title, "needs clarification", '<div>' + esc(data.question) + "</div>");
   }
@@ -206,7 +206,7 @@ function tileFor(title, data) {
   }
   const count = "Results (" + total + ")";
   const status = data.status && data.status !== "ok" ? data.status + " · " + count : count;
-  return tileHtml(title, status, body || '<div class="muted">Results (0)</div>');
+  return tileHtml(title, status, (body || '<div class="muted">Results (0)</div>') + (pending ? pendingNote() : ""));
 }
 
 function pendingNote() {
@@ -252,7 +252,7 @@ $("go").addEventListener("click", async () => {
       const slot = document.createElement("div");
       out.appendChild(slot);
       const data = await post({ request: text });
-      slot.innerHTML = tileFor("Plain language", data) + pendingNote();
+      slot.innerHTML = tileFor("Plain language", data, true);
       rankData(text, data).then((ranked) => { slot.innerHTML = tileFor("Plain language", ranked); });
     } else {
       const query = $("query").value.trim();
@@ -272,7 +272,7 @@ $("go").addEventListener("click", async () => {
         const slot = slots[i];
         try {
           const data = await fetchSource(type, query, forms);
-          slot.innerHTML = tileFor(label, data) + pendingNote();
+          slot.innerHTML = tileFor(label, data, true);
           rankData(query, data).then((ranked) => { slot.innerHTML = tileFor(label, ranked); });
         } catch (err) {
           failures++;
