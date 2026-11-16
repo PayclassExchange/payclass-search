@@ -2,13 +2,36 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
+
 import httpx
 
 GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
+# GDELT asks for at most one request every five seconds, and returns 429 otherwise.
+MIN_GAP_S = 5.5
+
+_lock = asyncio.Lock()
+_last_call = 0.0
 
 
 class GdeltError(Exception):
     pass
+
+
+async def _throttled_get(client: httpx.AsyncClient, params: dict) -> httpx.Response:
+    global _last_call
+    async with _lock:
+        wait = MIN_GAP_S - (time.monotonic() - _last_call)
+        if wait > 0:
+            await asyncio.sleep(wait)
+        resp = await client.get(GDELT_DOC_URL, params=params, timeout=20.0)
+        _last_call = time.monotonic()
+        if resp.status_code == 429:
+            await asyncio.sleep(MIN_GAP_S)
+            resp = await client.get(GDELT_DOC_URL, params=params, timeout=20.0)
+            _last_call = time.monotonic()
+        return resp
 
 
 async def gdelt_news(client: httpx.AsyncClient, query: str, limit: int) -> list[dict]:
@@ -21,7 +44,7 @@ async def gdelt_news(client: httpx.AsyncClient, query: str, limit: int) -> list[
         "sort": "DateDesc",
     }
     try:
-        resp = await client.get(GDELT_DOC_URL, params=params, timeout=20.0)
+        resp = await _throttled_get(client, params)
     except httpx.TransportError as exc:
         raise GdeltError("GDELT unreachable") from exc
     if resp.status_code >= 400:
