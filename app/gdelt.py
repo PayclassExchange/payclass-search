@@ -8,8 +8,8 @@ import time
 import httpx
 
 GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
-# GDELT asks for at most one request every five seconds, and returns 429 otherwise.
-MIN_GAP_S = 5.5
+# Cap: 10 GDELT requests per minute, one every 6 seconds. GDELT returns 429 when it is pushed harder.
+MIN_GAP_S = 6.0
 
 _lock = asyncio.Lock()
 _last_call = 0.0
