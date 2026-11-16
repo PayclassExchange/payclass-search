@@ -106,7 +106,7 @@ async function postGdelt(query) {
   const resp = await fetch("/ui/gdelt", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, limit: 25 }),
+    body: JSON.stringify({ query, limit: 10 }),
   });
   if (!resp.ok) throw new Error("GDELT unavailable");
   return resp.json();
