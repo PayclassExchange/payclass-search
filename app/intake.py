@@ -1,11 +1,12 @@
-"""Turns a plain-language request into a structured task using the LiteLLM gateway.
+"""Turns a plain-language request into a structured task.
 
-The model only fills task fields. It never picks resources, timeouts, or retries.
+The n8n workflow "Search Rank" (webhook search-intake) calls the LiteLLM Operations
+model with the search-intake instructions from NocoDB. This service never calls
+LiteLLM directly. The model only fills task fields. It never picks resources,
+timeouts, or retries.
 """
 
 from __future__ import annotations
-
-import json
 
 import httpx
 from pydantic import ValidationError
@@ -13,13 +14,7 @@ from pydantic import ValidationError
 from app.config import Settings
 from app.models import Task, task_adapter
 
-SYSTEM_PROMPT = """You convert a user's search request into exactly one JSON task.
-Return only a JSON object. Use one of these task schemas (JSON Schema):
-{schema}
-
-If the request lacks information that a schema requires, return
-{{"clarify": "<one short question>"}} instead.
-Do not add fields outside the schema. Do not choose sources or settings."""
+RANK_HEADER = "X-Search-Key"
 
 
 class IntakeError(Exception):
@@ -35,43 +30,36 @@ class NeedsClarification(Exception):
 async def plain_language_to_task(
     client: httpx.AsyncClient, settings: Settings, request_text: str
 ) -> Task:
-    if not (settings.litellm_url and settings.intake_model):
+    if not (settings.n8n_intake_url and settings.api_key):
         raise IntakeError("plain-language requests are not configured on this server")
 
-    schema = json.dumps(task_adapter.json_schema())
     body = {
-        "model": settings.intake_model,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT.format(schema=schema)},
-            {"role": "user", "content": request_text},
-        ],
-        "temperature": 0,
-        "response_format": {"type": "json_object"},
+        "request": request_text,
+        "schema": task_adapter.json_schema(),
     }
-    headers = {}
-    if settings.litellm_api_key:
-        headers["Authorization"] = f"Bearer {settings.litellm_api_key}"
-
     try:
         resp = await client.post(
-            f"{settings.litellm_url.rstrip('/')}/v1/chat/completions",
+            settings.n8n_intake_url,
             json=body,
-            headers=headers,
-            timeout=20.0,
+            headers={RANK_HEADER: settings.api_key},
+            timeout=30.0,
         )
     except httpx.TransportError as exc:
-        raise IntakeError("intake model unreachable") from exc
+        raise IntakeError("intake service unreachable") from exc
     if resp.status_code >= 400:
-        raise IntakeError(f"intake model returned {resp.status_code}")
+        raise IntakeError(f"intake service returned {resp.status_code}")
 
     try:
-        content = resp.json()["choices"][0]["message"]["content"]
-        data = json.loads(content)
-    except (KeyError, IndexError, TypeError, ValueError) as exc:
-        raise IntakeError("intake model returned unreadable output") from exc
+        data = resp.json()
+    except ValueError as exc:
+        raise IntakeError("intake service returned unreadable output") from exc
 
-    if isinstance(data, dict) and "clarify" in data:
+    if not isinstance(data, dict):
+        raise IntakeError("intake service returned unreadable output")
+    if "clarify" in data:
         raise NeedsClarification(str(data["clarify"]))
+    if "error" in data:
+        raise IntakeError(str(data["error"]))
 
     try:
         return task_adapter.validate_python(data)

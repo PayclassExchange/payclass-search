@@ -19,9 +19,6 @@ class Settings:
     courtlistener_token: str | None
     sec_user_agent: str | None
     fred_api_key: str | None
-    litellm_url: str | None
-    litellm_api_key: str | None
-    intake_model: str | None
     redis_url: str | None
     default_deadline_s: float
     max_deadline_s: float
@@ -34,6 +31,7 @@ class Settings:
     session_secret: str | None = None
     public_base_url: str = "https://search.payclassinc.com"
     n8n_rank_url: str | None = None
+    n8n_intake_url: str | None = None
 
 
 @lru_cache(maxsize=1)
@@ -44,9 +42,6 @@ def get_settings() -> Settings:
         courtlistener_token=_get("COURTLISTENER_TOKEN"),
         sec_user_agent=_get("SEC_USER_AGENT"),
         fred_api_key=_get("FRED_API_KEY"),
-        litellm_url=_get("LITELLM_URL"),
-        litellm_api_key=_get("LITELLM_API_KEY"),
-        intake_model=_get("INTAKE_MODEL"),
         redis_url=_get("REDIS_URL"),
         default_deadline_s=float(os.environ.get("DEFAULT_DEADLINE_SECONDS", "15")),
         max_deadline_s=float(os.environ.get("MAX_DEADLINE_SECONDS", "60")),
@@ -59,4 +54,5 @@ def get_settings() -> Settings:
         session_secret=_get("SESSION_SECRET"),
         public_base_url=_get("PUBLIC_BASE_URL") or "https://search.payclassinc.com",
         n8n_rank_url=_get("N8N_RANK_WEBHOOK_URL"),
+        n8n_intake_url=_get("N8N_INTAKE_WEBHOOK_URL"),
     )

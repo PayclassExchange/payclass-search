@@ -18,8 +18,9 @@ Send either a structured task or a plain-language request (not both):
 {"request": "bankruptcy news about John Main"}
 ```
 
-Plain-language requests need `LITELLM_URL` and `INTAKE_MODEL`. The model only fills
-task fields. It never picks resources.
+Plain-language requests need `N8N_INTAKE_WEBHOOK_URL` (the n8n `search-intake` webhook).
+n8n calls the LiteLLM Operations model, so this service never talks to LiteLLM. The
+model only fills task fields. It never picks resources.
 
 ## Task types
 
