@@ -255,7 +255,7 @@ $("go").addEventListener("click", async () => {
         slot.innerHTML = tileFor("Plain language", data);
         return;
       }
-      const RESULT_LABELS = { searxng_general: "Web search", searxng_news: "News", courtlistener: "Courts", sec_edgar: "SEC filings", fred: "Economic data" };
+      const RESULT_LABELS = { web: "Web search", news: "News", court: "Courts", filings: "SEC filings", economic: "Economic data" };
       for (const [key, step] of Object.entries(data.results || {})) {
         const label = RESULT_LABELS[key] || key;
         const single = { ...data, results: { [key]: step } };
