@@ -17,10 +17,11 @@
   legend { padding: 0 0.4rem; font-weight: 600; }
   label { display: block; margin: 0.5rem 0 0.2rem; font-size: 0.9rem; }
   input, select, textarea { width: 100%; box-sizing: border-box; padding: 0.5rem; font: inherit; border: 1px solid #8886; border-radius: 4px; background: transparent; color: inherit; }
-  .sources { display: grid; grid-template-columns: 1fr; gap: 0.6rem; margin-top: 0.5rem; }
-  .source { border: 1px solid #8886; border-radius: 6px; padding: 0.6rem 0.75rem; display: flex; gap: 0.5rem; align-items: flex-start; cursor: pointer; }
-  .source input { width: auto; margin-top: 0.2rem; }
-  .source small { display: block; color: #666; }
+  .sources { display: grid; grid-template-columns: 1fr; gap: 0.3rem; margin-top: 0.5rem; }
+  .source { margin: 0; border: 1px solid #8886; border-radius: 6px; padding: 0.3rem 0.6rem; display: flex; gap: 0.5rem; align-items: center; cursor: pointer; }
+  .source input { width: auto; margin: 0; }
+  .source span { display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
+  .source small { display: inline; color: #666; }
   .hidden { display: none; }
   button { margin-top: 0.75rem; padding: 0.6rem 1.2rem; font: inherit; border: 0; border-radius: 4px; background: #2563eb; color: #fff; cursor: pointer; }
   button:disabled { opacity: 0.5; cursor: wait; }
@@ -154,20 +155,24 @@ function render(title, data) {
     return;
   }
   let body = "";
+  let total = 0;
   for (const step of Object.values(data.results || {})) {
     if (step.status !== "ok" || !Array.isArray(step.items)) {
       body += '<div class="error">' + esc(step.status || "error") + "</div>";
       continue;
     }
+    total += step.items.length;
     if (step.items.length === 0) {
-      body += '<div class="muted">No results.</div>';
+      body += '<div class="muted">Results (0)</div>';
       continue;
     }
     body += '<ol class="links">' + step.items.map((it) =>
       '<li><a href="' + esc(it.url || "#") + '" target="_blank" rel="noopener noreferrer">' + esc(it.title || it.url || "(untitled)") + "</a>" +
       (it.snippet ? '<div class="muted">' + esc(it.snippet) + "</div>" : "") + "</li>").join("") + "</ol>";
   }
-  out.insertAdjacentHTML("beforeend", tileHtml(title, data.status, body || '<div class="muted">No results.</div>'));
+  const count = "Results (" + total + ")";
+  const status = data.status && data.status !== "ok" ? data.status + " · " + count : count;
+  out.insertAdjacentHTML("beforeend", tileHtml(title, status, body || '<div class="muted">Results (0)</div>'));
 }
 
 $("go").addEventListener("click", async () => {
