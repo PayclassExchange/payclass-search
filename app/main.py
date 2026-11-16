@@ -193,7 +193,7 @@ class RankRequest(BaseModel):
 
 class GdeltRequest(BaseModel):
     query: str = Field(min_length=2, max_length=200)
-    limit: int = Field(default=25, ge=1, le=50)
+    limit: int = Field(default=50, ge=1, le=250)
 
 
 @app.post("/ui/gdelt", include_in_schema=False)
