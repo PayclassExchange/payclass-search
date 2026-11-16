@@ -200,6 +200,10 @@ function tileFor(title, data, pending = false) {
       continue;
     }
     total += step.items.length;
+    if (step.ranked && step.items.length === 0) {
+      body += '<div class="muted">did not find relevant links</div>';
+      continue;
+    }
     if (step.items.length === 0) {
       body += '<div class="muted">Results (0)</div>';
       continue;
@@ -218,18 +222,19 @@ function pendingNote() {
 
 async function rankStep(query, step) {
   if (step.status !== "ok" || !Array.isArray(step.items) || step.items.length < 1) return step;
+  const noneRelevant = { ...step, items: [], ranked: true };
   try {
     const resp = await fetch("/ui/rank", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query, items: step.items.map((it) => ({ title: it.title || "", snippet: it.snippet || "", url: it.url || "" })) }),
     });
-    if (!resp.ok) return step;
+    if (!resp.ok) return noneRelevant;
     const data = await resp.json();
-    if (!Array.isArray(data.order)) return step;
-    return { ...step, items: data.order.map((i) => step.items[i]) };
+    if (!Array.isArray(data.order)) return noneRelevant;
+    return { ...step, items: data.order.map((i) => step.items[i]), ranked: true };
   } catch (err) {
-    return step;
+    return noneRelevant;
   }
 }
 
