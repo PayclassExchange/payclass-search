@@ -17,7 +17,7 @@
   legend { padding: 0 0.4rem; font-weight: 600; }
   label { display: block; margin: 0.5rem 0 0.2rem; font-size: 0.9rem; }
   input, select, textarea { width: 100%; box-sizing: border-box; padding: 0.5rem; font: inherit; border: 1px solid #8886; border-radius: 4px; background: transparent; color: inherit; }
-  .sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem; margin-top: 0.5rem; }
+  .sources { display: grid; grid-template-columns: 1fr; gap: 0.6rem; margin-top: 0.5rem; }
   .source { border: 1px solid #8886; border-radius: 6px; padding: 0.6rem 0.75rem; display: flex; gap: 0.5rem; align-items: flex-start; cursor: pointer; }
   .source input { width: auto; margin-top: 0.2rem; }
   .source small { display: block; color: #666; }
@@ -58,10 +58,10 @@
     <div class="sources">
       <label class="source"><input type="checkbox" name="src" value="web_search" checked><span>Open-source search engines<small>Web</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="news_search"><span>News<small>SearXNG news</small></span></label>
+      <label class="source"><input type="checkbox" name="src" value="drive_search"><span>Internal folders and files<small>Your files and shared folders</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="court_search"><span>Courts<small>CourtListener, party name</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="filing_search"><span>SEC filings<small>EDGAR</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="economic_search"><span>Economic data<small>St. Louis Federal Reserve</small></span></label>
-      <label class="source"><input type="checkbox" name="src" value="drive_search"><span>Internal folders and files<small>Your files and shared folders</small></span></label>
     </div>
     <label for="query">Query</label>
     <input id="query" type="text" placeholder="e.g. Strix Aero">
