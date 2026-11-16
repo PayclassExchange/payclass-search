@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field, ValidationError
 from app.cache import Cache
 from app.config import Settings, get_settings
 from app import drive
+from app.gdelt import GdeltError, gdelt_news
 from app.executor import CircuitBreaker, Executor
 from app.intake import IntakeError, NeedsClarification, plain_language_to_task
 from app.models import task_adapter
@@ -188,6 +189,20 @@ class RankItem(BaseModel):
 class RankRequest(BaseModel):
     query: str = Field(min_length=2, max_length=200)
     items: list[RankItem] = Field(max_length=50)
+
+
+class GdeltRequest(BaseModel):
+    query: str = Field(min_length=2, max_length=200)
+    limit: int = Field(default=25, ge=1, le=50)
+
+
+@app.post("/ui/gdelt", include_in_schema=False)
+async def ui_gdelt(body: GdeltRequest, request: Request) -> dict:
+    try:
+        items = await gdelt_news(request.app.state.client, body.query, body.limit)
+    except GdeltError as exc:
+        return {"status": "error", "items": [], "detail": str(exc)}
+    return {"status": "ok", "items": items}
 
 
 @app.post("/ui/rank", include_in_schema=False)

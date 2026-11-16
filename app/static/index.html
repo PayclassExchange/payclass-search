@@ -102,6 +102,42 @@ function taskFor(type, query, forms) {
   return { type, query, limit };
 }
 
+async function postGdelt(query) {
+  const resp = await fetch("/ui/gdelt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, limit: 25 }),
+  });
+  if (!resp.ok) throw new Error("GDELT unavailable");
+  return resp.json();
+}
+
+function mergeGdelt(main, gdelt) {
+  if (main.status === "clarification_needed" || !gdelt || gdelt.status !== "ok" || !gdelt.items.length) return main;
+  const results = { ...(main.results || {}) };
+  const key = Object.keys(results).find((k) => results[k].status === "ok" && Array.isArray(results[k].items));
+  const seen = new Set();
+  const existing = key ? results[key].items : [];
+  existing.forEach((it) => seen.add(it.url));
+  const extra = gdelt.items.filter((it) => it.url && !seen.has(it.url));
+  if (key) {
+    results[key] = { ...results[key], items: [...existing, ...extra] };
+  } else {
+    results.gdelt = { status: "ok", items: extra };
+  }
+  return { ...main, results };
+}
+
+async function fetchSource(type, query, forms) {
+  if (type === "drive_search") return postDrive(query);
+  if (type !== "news_search") return post({ task: taskFor(type, query, forms) });
+  const [main, gdelt] = await Promise.all([
+    post({ task: taskFor(type, query, forms) }),
+    postGdelt(query).catch(() => null),
+  ]);
+  return mergeGdelt(main, gdelt);
+}
+
 async function postDrive(query) {
   const resp = await fetch("/ui/drive", {
     method: "POST",
@@ -235,7 +271,7 @@ $("go").addEventListener("click", async () => {
         const label = LABELS[type];
         const slot = slots[i];
         try {
-          const data = await (type === "drive_search" ? postDrive(query) : post({ task: taskFor(type, query, forms) }));
+          const data = await fetchSource(type, query, forms);
           slot.innerHTML = tileFor(label, data) + pendingNote();
           rankData(query, data).then((ranked) => { slot.innerHTML = tileFor(label, ranked); });
         } catch (err) {
