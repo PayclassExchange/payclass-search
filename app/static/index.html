@@ -65,13 +65,13 @@
       <label class="source"><input type="checkbox" name="src" value="economic_search"><span>Economic data<small>St. Louis Federal Reserve</small></span></label>
     </div>
     <label for="query">Query</label>
-    <input id="query" type="text" placeholder="e.g. Strix Aero">
+    <input id="query" type="text">
     <div class="muted" style="margin-top:0.5rem">Filing types (SEC only, optional, comma-separated): <input id="forms" type="text" placeholder="10-K, 8-K" style="width:auto;display:inline-block;margin-left:0.5rem"></div>
   </div>
 
   <div id="plainBox" class="hidden">
     <label for="request">What do you want to search for?</label>
-    <textarea id="request" rows="3" placeholder="e.g. recent news about Strix Aero"></textarea>
+    <textarea id="request" rows="3"></textarea>
   </div>
 
   <button id="go">Search</button>
@@ -145,7 +145,7 @@ async function postDrive(query) {
     body: JSON.stringify({ query, limit: 10 }),
   });
   const data = await resp.json().catch(() => ({}));
-  if (resp.status === 401) throw new Error("Sign in with Google (Payclass account) to search internal folders and files.");
+  if (resp.status === 401) throw new Error("Connect with your Payclass credential to search internal folders and files.");
   if (!resp.ok) throw new Error(data.detail || resp.statusText);
   return data;
 }
@@ -164,7 +164,7 @@ async function loadAuth() {
     });
   } else {
     box.className = "signin-box";
-    box.innerHTML = '<a class="signin" href="/auth/google/login">Sign in with Google</a>to search internal folders and files (Payclass accounts only).';
+    box.innerHTML = '<a class="signin" href="/auth/google/login">Connect with your Payclass credential</a>to search internal folders and files (Payclass accounts only).';
   }
 }
 loadAuth();
@@ -201,8 +201,7 @@ function tileFor(title, data, pending = false) {
       continue;
     }
     body += '<ol class="links">' + step.items.map((it) =>
-      '<li><a href="' + esc(it.url || "#") + '" target="_blank" rel="noopener noreferrer">' + esc(it.title || it.url || "(untitled)") + "</a>" +
-      (it.snippet ? '<div class="muted">' + esc(it.snippet) + "</div>" : "") + "</li>").join("") + "</ol>";
+      '<li><a href="' + esc(it.url || "#") + '" target="_blank" rel="noopener noreferrer">' + esc(it.title || it.url || "(untitled)") + "</a></li>").join("") + "</ol>";
   }
   const count = "Results (" + total + ")";
   const status = data.status && data.status !== "ok" ? data.status + " · " + count : count;
