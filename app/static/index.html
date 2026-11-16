@@ -173,6 +173,10 @@ function tileFor(title, data) {
   return tileHtml(title, status, body || '<div class="muted">Results (0)</div>');
 }
 
+function pendingNote() {
+  return '<div class="muted pending-note">AI is still reviewing relevance. This order may change in a moment.</div>';
+}
+
 async function rankStep(query, step) {
   if (step.status !== "ok" || !Array.isArray(step.items) || step.items.length < 2) return step;
   try {
@@ -212,7 +216,7 @@ $("go").addEventListener("click", async () => {
       const slot = document.createElement("div");
       out.appendChild(slot);
       const data = await post({ request: text });
-      slot.innerHTML = tileFor("Plain language", data);
+      slot.innerHTML = tileFor("Plain language", data) + pendingNote();
       rankData(text, data).then((ranked) => { slot.innerHTML = tileFor("Plain language", ranked); });
     } else {
       const query = $("query").value.trim();
@@ -232,7 +236,7 @@ $("go").addEventListener("click", async () => {
         const slot = slots[i];
         try {
           const data = await (type === "drive_search" ? postDrive(query) : post({ task: taskFor(type, query, forms) }));
-          slot.innerHTML = tileFor(label, data);
+          slot.innerHTML = tileFor(label, data) + pendingNote();
           rankData(query, data).then((ranked) => { slot.innerHTML = tileFor(label, ranked); });
         } catch (err) {
           failures++;
