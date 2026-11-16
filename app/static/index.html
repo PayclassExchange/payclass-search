@@ -266,10 +266,20 @@ $("go").addEventListener("click", async () => {
         const slot = document.createElement("div");
         out.appendChild(slot);
         slot.innerHTML = tileFor(label, single, true);
-        const gdelt = key === "news" && data.news_query ? postGdelt(data.news_query).catch(() => null) : Promise.resolve(null);
+        const gdelt = key === "news" && data.search_query ? postGdelt(data.search_query).catch(() => null) : Promise.resolve(null);
         gdelt
           .then((g) => rankData(text, mergeGdelt(single, g, key)))
           .then((ranked) => { slot.innerHTML = tileFor(label, ranked); });
+      }
+      if (signedIn && data.search_query) {
+        const slot = document.createElement("div");
+        out.appendChild(slot);
+        const label = LABELS.drive_search;
+        const q = data.search_query;
+        postDrive(q)
+          .then((d) => { slot.innerHTML = tileFor(label, d, true); return rankData(q, d); })
+          .then((ranked) => { slot.innerHTML = tileFor(label, ranked); })
+          .catch((err) => { slot.innerHTML = '<h2>' + esc(label) + '</h2><div class="step error">' + esc(err.message) + "</div>"; });
       }
       if (!signedIn) {
         const slot = document.createElement("div");
