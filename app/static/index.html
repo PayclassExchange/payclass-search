@@ -148,11 +148,9 @@ function tileHtml(title, status, bodyHtml) {
   return '<section class="tile"><header><strong>' + esc(title) + '</strong><span class="muted">' + esc(status || "") + '</span></header><div class="tile-body">' + bodyHtml + "</div></section>";
 }
 
-function render(title, data) {
-  const out = $("results");
+function tileFor(title, data) {
   if (data.status === "clarification_needed") {
-    out.insertAdjacentHTML("beforeend", tileHtml(title, "needs clarification", '<div>' + esc(data.question) + "</div>"));
-    return;
+    return tileHtml(title, "needs clarification", '<div>' + esc(data.question) + "</div>");
   }
   let body = "";
   let total = 0;
@@ -172,7 +170,7 @@ function render(title, data) {
   }
   const count = "Results (" + total + ")";
   const status = data.status && data.status !== "ok" ? data.status + " · " + count : count;
-  out.insertAdjacentHTML("beforeend", tileHtml(title, status, body || '<div class="muted">Results (0)</div>'));
+  return tileHtml(title, status, body || '<div class="muted">Results (0)</div>');
 }
 
 async function rankStep(query, step) {
@@ -211,7 +209,11 @@ $("go").addEventListener("click", async () => {
     if ($("mode").value === "plain") {
       const text = $("request").value.trim();
       if (text.length < 2) throw new Error("Type a request first.");
-      render("Plain language", await rankData(text, await post({ request: text })));
+      const slot = document.createElement("div");
+      out.appendChild(slot);
+      const data = await post({ request: text });
+      slot.innerHTML = tileFor("Plain language", data);
+      rankData(text, data).then((ranked) => { slot.innerHTML = tileFor("Plain language", ranked); });
     } else {
       const query = $("query").value.trim();
       if (query.length < 2) throw new Error("Type a query first.");
@@ -219,21 +221,24 @@ $("go").addEventListener("click", async () => {
       const picked = [...document.querySelectorAll('input[name="src"]:checked')].map((c) => c.value);
       if (picked.length === 0) throw new Error("Pick at least one source.");
 
-      const results = await Promise.allSettled(
-        picked.map((type) => type === "drive_search" ? postDrive(query) : post({ task: taskFor(type, query, forms) }))
-      );
-      let failures = 0;
-      const ranked = await Promise.all(results.map((r) =>
-        r.status === "fulfilled" ? rankData(query, r.value).then((v) => ({ status: "fulfilled", value: v })) : r
-      ));
-      ranked.forEach((r, i) => {
-        const label = LABELS[picked[i]];
-        if (r.status === "fulfilled") render(label, r.value);
-        else {
-          failures++;
-          out.insertAdjacentHTML("beforeend", '<h2>' + esc(label) + '</h2><div class="step error">' + esc(r.reason.message) + "</div>");
-        }
+      const slots = picked.map(() => {
+        const slot = document.createElement("div");
+        out.appendChild(slot);
+        return slot;
       });
+      let failures = 0;
+      await Promise.all(picked.map(async (type, i) => {
+        const label = LABELS[type];
+        const slot = slots[i];
+        try {
+          const data = await (type === "drive_search" ? postDrive(query) : post({ task: taskFor(type, query, forms) }));
+          slot.innerHTML = tileFor(label, data);
+          rankData(query, data).then((ranked) => { slot.innerHTML = tileFor(label, ranked); });
+        } catch (err) {
+          failures++;
+          slot.innerHTML = '<h2>' + esc(label) + '</h2><div class="step error">' + esc(err.message) + "</div>";
+        }
+      }));
       status.textContent = "Done: " + (picked.length - failures) + " of " + picked.length + " sources returned.";
       return;
     }
