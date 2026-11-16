@@ -222,6 +222,15 @@ async def healthz() -> dict:
     return {"status": "ok"}
 
 
+def _news_query(task) -> str | None:
+    # The text the News source searched for, so the page can ask GDELT with the same words.
+    if task.type == "news_search":
+        return task.query
+    if task.type == "entity_background":
+        return task.name
+    return None
+
+
 @app.post("/v1/tasks")
 async def run_task(
     body: TaskRequest,
@@ -264,5 +273,6 @@ async def run_task(
     return {
         "task_id": task_id,
         "status": overall,
+        "news_query": _news_query(task),
         "results": {step_id: asdict(r) for step_id, r in results.items()},
     }

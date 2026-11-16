@@ -112,10 +112,11 @@ async function postGdelt(query) {
   return resp.json();
 }
 
-function mergeGdelt(main, gdelt) {
+function mergeGdelt(main, gdelt, onlyKey) {
   if (main.status === "clarification_needed" || !gdelt || gdelt.status !== "ok" || !gdelt.items.length) return main;
   const results = { ...(main.results || {}) };
-  const key = Object.keys(results).find((k) => results[k].status === "ok" && Array.isArray(results[k].items));
+  if (onlyKey && (!results[onlyKey] || results[onlyKey].status !== "ok")) return main;
+  const key = onlyKey || Object.keys(results).find((k) => results[k].status === "ok" && Array.isArray(results[k].items));
   const seen = new Set();
   const existing = key ? results[key].items : [];
   existing.forEach((it) => seen.add(it.url));
@@ -145,14 +146,17 @@ async function postDrive(query) {
     body: JSON.stringify({ query, limit: 10 }),
   });
   const data = await resp.json().catch(() => ({}));
-  if (resp.status === 401) throw new Error("Connect with your Payclass credential to search internal folders and files.");
+  if (resp.status === 401) throw new Error("login to search internal files");
   if (!resp.ok) throw new Error(data.detail || resp.statusText);
   return data;
 }
 
+let signedIn = false;
+
 async function loadAuth() {
   const box = $("auth");
   const resp = await fetch("/auth/me");
+  signedIn = resp.ok;
   if (resp.ok) {
     const me = await resp.json();
     box.className = "muted";
@@ -262,7 +266,15 @@ $("go").addEventListener("click", async () => {
         const slot = document.createElement("div");
         out.appendChild(slot);
         slot.innerHTML = tileFor(label, single, true);
-        rankData(text, single).then((ranked) => { slot.innerHTML = tileFor(label, ranked); });
+        const gdelt = key === "news" && data.news_query ? postGdelt(data.news_query).catch(() => null) : Promise.resolve(null);
+        gdelt
+          .then((g) => rankData(text, mergeGdelt(single, g, key)))
+          .then((ranked) => { slot.innerHTML = tileFor(label, ranked); });
+      }
+      if (!signedIn) {
+        const slot = document.createElement("div");
+        out.appendChild(slot);
+        slot.innerHTML = tileHtml("Internal folders and files", "sign in required", '<a class="signin" href="/auth/google/login">login to search internal files</a>');
       }
       status.textContent = "Done.";
       return;
