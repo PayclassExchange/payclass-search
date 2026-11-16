@@ -44,7 +44,7 @@ async def rank_items(client: httpx.AsyncClient, settings: Settings, query: str, 
             settings.n8n_rank_url,
             json=body,
             headers={RANK_HEADER: settings.api_key},
-            timeout=20.0,
+            timeout=30.0,
         )
     except httpx.TransportError:
         return _identity(n)
