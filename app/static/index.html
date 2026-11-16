@@ -57,7 +57,7 @@
   <div id="structBox">
     <label>Sources</label>
     <div class="sources">
-      <label class="source"><input type="checkbox" name="src" value="web_search" checked><span>Open-source search engines</span></label>
+      <label class="source"><input type="checkbox" name="src" value="web_search" checked><span>Web search</span></label>
       <label class="source"><input type="checkbox" name="src" value="news_search"><span>News</span></label>
       <label class="source"><input type="checkbox" name="src" value="drive_search"><span>Internal folders and files</span></label>
       <label class="source"><input type="checkbox" name="src" value="court_search"><span>Courts</span></label>
@@ -82,7 +82,7 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const LABELS = { web_search: "Open-source search engines", news_search: "News", court_search: "Courts", filing_search: "SEC filings", economic_search: "Economic data", drive_search: "Internal folders and files" };
+const LABELS = { web_search: "Web search", news_search: "News", court_search: "Courts", filing_search: "SEC filings", economic_search: "Economic data", drive_search: "Internal folders and files" };
 
 $("mode").addEventListener("change", () => {
   const plain = $("mode").value === "plain";
@@ -255,7 +255,7 @@ $("go").addEventListener("click", async () => {
         slot.innerHTML = tileFor("Plain language", data);
         return;
       }
-      const RESULT_LABELS = { searxng_general: "Open-source search engines", searxng_news: "News", courtlistener: "Courts", sec_edgar: "SEC filings", fred: "Economic data" };
+      const RESULT_LABELS = { searxng_general: "Web search", searxng_news: "News", courtlistener: "Courts", sec_edgar: "SEC filings", fred: "Economic data" };
       for (const [key, step] of Object.entries(data.results || {})) {
         const label = RESULT_LABELS[key] || key;
         const single = { ...data, results: { [key]: step } };
