@@ -40,6 +40,7 @@
 <header>
   <img src="/static/payclass-logo.jpg" alt="Payclass, Your Capital Partner">
   <h1>Payclass Search</h1>
+  <div id="auth" class="muted" style="margin-top:0.5rem"></div>
 </header>
 
 <fieldset>
@@ -58,6 +59,7 @@
       <label class="source"><input type="checkbox" name="src" value="court_search"><span>Courts<small>CourtListener, party name</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="filing_search"><span>SEC filings<small>EDGAR</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="economic_search"><span>Economic data<small>St. Louis Federal Reserve</small></span></label>
+      <label class="source"><input type="checkbox" name="src" value="drive_search"><span>Google Drive<small>Your files and shared folders</small></span></label>
     </div>
     <label for="query">Query</label>
     <input id="query" type="text" placeholder="e.g. Strix Aero">
@@ -77,7 +79,7 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const LABELS = { web_search: "Open-source search engines", news_search: "News", court_search: "Courts", filing_search: "SEC filings", economic_search: "Economic data" };
+const LABELS = { web_search: "Open-source search engines", news_search: "News", court_search: "Courts", filing_search: "SEC filings", economic_search: "Economic data", drive_search: "Google Drive" };
 
 $("mode").addEventListener("change", () => {
   const plain = $("mode").value === "plain";
@@ -96,6 +98,35 @@ function taskFor(type, query, forms) {
   if (type === "filing_search") return { type, query, forms, limit };
   return { type, query, limit };
 }
+
+async function postDrive(query) {
+  const resp = await fetch("/ui/drive", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, limit: 10 }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (resp.status === 401) throw new Error("Sign in with Google (Payclass account) to search Drive.");
+  if (!resp.ok) throw new Error(data.detail || resp.statusText);
+  return data;
+}
+
+async function loadAuth() {
+  const box = $("auth");
+  const resp = await fetch("/auth/me");
+  if (resp.ok) {
+    const me = await resp.json();
+    box.innerHTML = "Signed in as " + esc(me.email) + ' &middot; <a href="#" id="logout">Sign out</a>';
+    $("logout").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await fetch("/auth/logout", { method: "POST" });
+      location.reload();
+    });
+  } else {
+    box.innerHTML = '<a href="/auth/google/login">Sign in with Google</a> to search Google Drive (Payclass accounts only).';
+  }
+}
+loadAuth();
 
 async function post(body) {
   const resp = await fetch("/ui/tasks", {
@@ -157,7 +188,7 @@ $("go").addEventListener("click", async () => {
       if (picked.length === 0) throw new Error("Pick at least one source.");
 
       const results = await Promise.allSettled(
-        picked.map((type) => post({ task: taskFor(type, query, forms) }))
+        picked.map((type) => type === "drive_search" ? postDrive(query) : post({ task: taskFor(type, query, forms) }))
       );
       let failures = 0;
       results.forEach((r, i) => {

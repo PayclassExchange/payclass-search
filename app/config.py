@@ -29,6 +29,10 @@ class Settings:
     cache_ttl_s: int
     breaker_threshold: int
     breaker_cooldown_s: float
+    google_oauth_client_id: str | None = None
+    google_oauth_client_secret: str | None = None
+    session_secret: str | None = None
+    public_base_url: str = "https://search.payclassinc.com"
 
 
 @lru_cache(maxsize=1)
@@ -49,4 +53,8 @@ def get_settings() -> Settings:
         cache_ttl_s=int(os.environ.get("CACHE_TTL_SECONDS", "900")),
         breaker_threshold=int(os.environ.get("BREAKER_THRESHOLD", "3")),
         breaker_cooldown_s=float(os.environ.get("BREAKER_COOLDOWN_SECONDS", "60")),
+        google_oauth_client_id=_get("GOOGLE_OAUTH_CLIENT_ID"),
+        google_oauth_client_secret=_get("GOOGLE_OAUTH_CLIENT_SECRET"),
+        session_secret=_get("SESSION_SECRET"),
+        public_base_url=_get("PUBLIC_BASE_URL") or "https://search.payclassinc.com",
     )

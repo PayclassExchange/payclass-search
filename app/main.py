@@ -12,12 +12,13 @@ import httpx
 from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
 from app.cache import Cache
 from app.config import Settings, get_settings
+from app import drive
 from app.executor import CircuitBreaker, Executor
 from app.intake import IntakeError, NeedsClarification, plain_language_to_task
 from app.models import task_adapter
@@ -100,6 +101,81 @@ async def ui_run_task(body: TaskRequest, request: Request) -> dict:
     # Same-origin endpoint for the browser page. The server attaches the API key,
     # so the key never reaches the page. Gate this route before sharing the URL.
     return await run_task(body, request, authorization=f"Bearer {get_settings().api_key}")
+
+
+def _drive_settings() -> tuple[str, str, str]:
+    cfg = get_settings()
+    if not (cfg.google_oauth_client_id and cfg.google_oauth_client_secret and cfg.session_secret):
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured")
+    return cfg.google_oauth_client_id, cfg.google_oauth_client_secret, cfg.session_secret
+
+
+def _session_email(request: Request) -> dict | None:
+    cfg = get_settings()
+    if not cfg.session_secret:
+        return None
+    return drive.unsign(request.cookies.get(drive.SESSION_COOKIE), cfg.session_secret)
+
+
+@app.get("/auth/google/login", include_in_schema=False)
+async def google_login() -> RedirectResponse:
+    client_id, _, secret = _drive_settings()
+    state = uuid.uuid4().hex
+    redirect_uri = get_settings().public_base_url + "/auth/google/callback"
+    resp = RedirectResponse(drive.login_url(client_id, redirect_uri, state), status_code=302)
+    resp.set_cookie(drive.STATE_COOKIE, drive.sign({"s": state}, secret), max_age=600, httponly=True, secure=True, samesite="lax")
+    return resp
+
+
+@app.get("/auth/google/callback", include_in_schema=False)
+async def google_callback(request: Request, code: str, state: str) -> RedirectResponse:
+    client_id, client_secret, secret = _drive_settings()
+    saved = drive.unsign(request.cookies.get(drive.STATE_COOKIE), secret)
+    if not saved or saved.get("s") != state:
+        raise HTTPException(status_code=400, detail="Sign-in expired. Try again.")
+    redirect_uri = get_settings().public_base_url + "/auth/google/callback"
+    client = request.app.state.client
+    tokens = await drive.exchange_code(client, client_id, client_secret, code, redirect_uri)
+    refresh = tokens.get("refresh_token")
+    if not refresh:
+        raise HTTPException(status_code=400, detail="Google did not return a refresh token. Try again.")
+    email = await drive.email_for_token(client, tokens["access_token"])
+    resp = RedirectResponse("/", status_code=302)
+    resp.set_cookie(drive.SESSION_COOKIE, drive.sign({"rt": refresh, "email": email}, secret), httponly=True, secure=True, samesite="lax", max_age=60 * 60 * 24 * 30)
+    resp.delete_cookie(drive.STATE_COOKIE)
+    return resp
+
+
+@app.get("/auth/me", include_in_schema=False)
+async def auth_me(request: Request) -> dict:
+    session = _session_email(request)
+    if not session:
+        raise HTTPException(status_code=401, detail="not signed in")
+    return {"email": session["email"]}
+
+
+@app.post("/auth/logout", include_in_schema=False)
+async def auth_logout() -> RedirectResponse:
+    resp = RedirectResponse("/", status_code=302)
+    resp.delete_cookie(drive.SESSION_COOKIE)
+    return resp
+
+
+class DriveRequest(BaseModel):
+    query: str = Field(min_length=2, max_length=200)
+    limit: int = Field(default=10, ge=1, le=50)
+
+
+@app.post("/ui/drive", include_in_schema=False)
+async def ui_drive(body: DriveRequest, request: Request) -> dict:
+    client_id, client_secret, _ = _drive_settings()
+    session = _session_email(request)
+    if not session:
+        raise HTTPException(status_code=401, detail="Sign in with Google first")
+    client = request.app.state.client
+    access = await drive.access_token_for(client, client_id, client_secret, session["rt"])
+    items = await drive.drive_search(client, access, body.query, body.limit)
+    return {"task_id": uuid.uuid4().hex, "status": "ok", "results": {"drive": {"status": "ok", "items": items}}}
 
 
 @app.get("/healthz")
