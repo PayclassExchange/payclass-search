@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 
 import httpx
 
+logger = logging.getLogger(__name__)
+
 GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
-# Cap: 10 GDELT requests per minute, one every 6 seconds. GDELT returns 429 when it is pushed harder.
-MIN_GAP_S = 6.0
+# Cap: 10 GDELT requests per minute, one every 15 seconds, to stay clear of GDELT's 429 limit.
+MIN_GAP_S = 15.0
 
 _lock = asyncio.Lock()
 _last_call = 0.0
@@ -36,7 +39,7 @@ async def _throttled_get(client: httpx.AsyncClient, params: dict) -> httpx.Respo
 
 async def gdelt_news(client: httpx.AsyncClient, query: str, limit: int) -> list[dict]:
     params = {
-        "query": f'"{query}"',
+        "query": query,
         "mode": "ArtList",
         "format": "json",
         "maxrecords": str(limit),
@@ -53,10 +56,14 @@ async def gdelt_news(client: httpx.AsyncClient, query: str, limit: int) -> list[
     try:
         data = resp.json()
     except ValueError:
+        logger.warning("GDELT non-JSON response for %r: %r", query, resp.text[:300])
         return []
     articles = data.get("articles") if isinstance(data, dict) else None
     if not isinstance(articles, list):
+        logger.warning("GDELT response without articles for %r: %r", query, resp.text[:300])
         return []
+    if not articles:
+        logger.info("GDELT returned 0 articles for %r", query)
 
     items = []
     for article in articles:
