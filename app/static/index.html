@@ -248,11 +248,24 @@ $("go").addEventListener("click", async () => {
     if ($("mode").value === "plain") {
       const text = $("request").value.trim();
       if (text.length < 2) throw new Error("Type a request first.");
-      const slot = document.createElement("div");
-      out.appendChild(slot);
       const data = await post({ request: text });
-      slot.innerHTML = tileFor("Plain language", data, true);
-      rankData(text, data).then((ranked) => { slot.innerHTML = tileFor("Plain language", ranked); });
+      if (data.status === "clarification_needed") {
+        const slot = document.createElement("div");
+        out.appendChild(slot);
+        slot.innerHTML = tileFor("Plain language", data);
+        return;
+      }
+      const RESULT_LABELS = { searxng_general: "Open-source search engines", searxng_news: "News", courtlistener: "Courts", sec_edgar: "SEC filings", fred: "Economic data" };
+      for (const [key, step] of Object.entries(data.results || {})) {
+        const label = RESULT_LABELS[key] || key;
+        const single = { ...data, results: { [key]: step } };
+        const slot = document.createElement("div");
+        out.appendChild(slot);
+        slot.innerHTML = tileFor(label, single, true);
+        rankData(text, single).then((ranked) => { slot.innerHTML = tileFor(label, ranked); });
+      }
+      status.textContent = "Done.";
+      return;
     } else {
       const query = $("query").value.trim();
       if (query.length < 2) throw new Error("Type a query first.");
