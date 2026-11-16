@@ -64,9 +64,10 @@ def plan(task: Task) -> list[Step]:
         return [Step("economic", FRED, {"query": task.query, "limit": task.limit})]
 
     if isinstance(task, EntityBackground):
-        # The three lookups are independent, so they run in parallel.
+        # The four lookups are independent, so they run in parallel.
         # To run one after another, add depends_on to the later step.
         return [
+            Step("web", SEARXNG_GENERAL, {"query": task.name, "limit": task.limit}),
             Step(
                 "news",
                 SEARXNG_NEWS,
