@@ -178,7 +178,7 @@ function pendingNote() {
 }
 
 async function rankStep(query, step) {
-  if (step.status !== "ok" || !Array.isArray(step.items) || step.items.length < 2) return step;
+  if (step.status !== "ok" || !Array.isArray(step.items) || step.items.length < 1) return step;
   try {
     const resp = await fetch("/ui/rank", {
       method: "POST",
