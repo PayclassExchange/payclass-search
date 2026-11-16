@@ -11,6 +11,8 @@
   header img { display: block; height: 72px; width: auto; }
   h1 { font-size: 1.25rem; margin: 0.75rem 0 0; }
   .muted { color: #666; font-size: 0.9rem; }
+  .signin-box { margin-top: 0.75rem; padding: 0.75rem 1rem; border: 2px solid #2563eb; border-radius: 8px; color: inherit; font-size: 1rem; }
+  .signin { display: inline-block; padding: 0.5rem 1rem; border-radius: 4px; background: #2563eb; color: #fff; font-weight: 600; text-decoration: none; margin-right: 0.4rem; }
   fieldset { border: 1px solid #8884; border-radius: 6px; padding: 1rem; margin: 1rem 0; }
   legend { padding: 0 0.4rem; font-weight: 600; }
   label { display: block; margin: 0.5rem 0 0.2rem; font-size: 0.9rem; }
@@ -59,7 +61,7 @@
       <label class="source"><input type="checkbox" name="src" value="court_search"><span>Courts<small>CourtListener, party name</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="filing_search"><span>SEC filings<small>EDGAR</small></span></label>
       <label class="source"><input type="checkbox" name="src" value="economic_search"><span>Economic data<small>St. Louis Federal Reserve</small></span></label>
-      <label class="source"><input type="checkbox" name="src" value="drive_search"><span>Google Drive<small>Your files and shared folders</small></span></label>
+      <label class="source"><input type="checkbox" name="src" value="drive_search"><span>Internal folders and files<small>Your files and shared folders</small></span></label>
     </div>
     <label for="query">Query</label>
     <input id="query" type="text" placeholder="e.g. Strix Aero">
@@ -79,7 +81,7 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const LABELS = { web_search: "Open-source search engines", news_search: "News", court_search: "Courts", filing_search: "SEC filings", economic_search: "Economic data", drive_search: "Google Drive" };
+const LABELS = { web_search: "Open-source search engines", news_search: "News", court_search: "Courts", filing_search: "SEC filings", economic_search: "Economic data", drive_search: "Internal folders and files" };
 
 $("mode").addEventListener("change", () => {
   const plain = $("mode").value === "plain";
@@ -106,7 +108,7 @@ async function postDrive(query) {
     body: JSON.stringify({ query, limit: 10 }),
   });
   const data = await resp.json().catch(() => ({}));
-  if (resp.status === 401) throw new Error("Sign in with Google (Payclass account) to search Drive.");
+  if (resp.status === 401) throw new Error("Sign in with Google (Payclass account) to search internal folders and files.");
   if (!resp.ok) throw new Error(data.detail || resp.statusText);
   return data;
 }
@@ -116,6 +118,7 @@ async function loadAuth() {
   const resp = await fetch("/auth/me");
   if (resp.ok) {
     const me = await resp.json();
+    box.className = "muted";
     box.innerHTML = "Signed in as " + esc(me.email) + ' &middot; <a href="#" id="logout">Sign out</a>';
     $("logout").addEventListener("click", async (e) => {
       e.preventDefault();
@@ -123,7 +126,8 @@ async function loadAuth() {
       location.reload();
     });
   } else {
-    box.innerHTML = '<a href="/auth/google/login">Sign in with Google</a> to search Google Drive (Payclass accounts only).';
+    box.className = "signin-box";
+    box.innerHTML = '<a class="signin" href="/auth/google/login">Sign in with Google</a>to search internal folders and files (Payclass accounts only).';
   }
 }
 loadAuth();
